@@ -1,0 +1,10 @@
+{
+  "src": [
+    "pages/home",
+    "pages/Index",
+    "pages/myPlant",
+    "pages/addPlant",
+    "pages/tip",
+    "pages/login"
+  ]
+}
