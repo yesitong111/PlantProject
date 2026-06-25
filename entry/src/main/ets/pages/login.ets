@@ -9,45 +9,54 @@ struct LoginPage {
   @State password: string = ''
   @State rememberPwd: boolean = false
   @State isLogging: boolean = false
-  @State userNameFocused: boolean = false
-  @State passwordFocused: boolean = false
+  @State userFocused: boolean = false
+  @State pwdFocused: boolean = false
   @State btnScale: number = 1.0
+  @State heroOpacity: number = 0
+  @State heroY: number = -20
+  @State formOpacity: number = 0
+  @State formY: number = 20
   prefDB: preferences.Preferences | null = null
 
   aboutToAppear() {
+    animateTo({ duration: 600, curve: Curve.EaseOut }, () => {
+      this.heroOpacity = 1
+      this.heroY = 0
+    })
+    animateTo({ duration: 700, curve: Curve.EaseOut, delay: 200 }, () => {
+      this.formOpacity = 1
+      this.formY = 0
+    })
     try {
       preferences.getPreferences(getContext(this), 'userData')
         .then((pref: preferences.Preferences) => {
           this.prefDB = pref
           try {
-            const savedRemember = pref.getSync('rememberPwd', false) as boolean
-            this.rememberPwd = savedRemember
-            if (savedRemember) {
+            const r = pref.getSync('rememberPwd', false) as boolean
+            this.rememberPwd = r
+            if (r) {
               this.userName = pref.getSync('user', '') as string
               this.password = pref.getSync('password', '') as string
             }
           } catch (e) {}
-        })
-        .catch(() => {})
+        }).catch(() => {})
     } catch (e) {}
   }
 
   submitLogin() {
     if (this.userName.trim() === '') {
-      try { promptAction.showToast({ message: '请输入用户名或学号 😊', duration: 2000 }) } catch (e) {}
+      try { promptAction.showToast({ message: '请输入用户名或学号', duration: 2000 }) } catch (e) {}
       return
     }
     if (this.password.trim() === '') {
-      try { promptAction.showToast({ message: '请输入密码哦~', duration: 2000 }) } catch (e) {}
+      try { promptAction.showToast({ message: '请输入密码', duration: 2000 }) } catch (e) {}
       return
     }
     if (this.password.length < 3) {
       try { promptAction.showToast({ message: '密码至少需要3位字符', duration: 2000 }) } catch (e) {}
       return
     }
-
     this.isLogging = true
-
     try {
       this.prefDB?.putSync('user', this.userName.trim())
       if (this.rememberPwd) {
@@ -62,233 +71,193 @@ struct LoginPage {
 
     setTimeout(() => {
       this.isLogging = false
-      try { promptAction.showToast({ message: `🎉 欢迎回来，${this.userName.trim()}！`, duration: 2000 }) } catch (e) {}
+      try { promptAction.showToast({ message: `欢迎回来，${this.userName.trim()}！`, duration: 2000 }) } catch (e) {}
       try {
         router.replaceUrl({ url: 'pages/home' })
       } catch (e) {
         try { router.back() } catch (err) {}
       }
-    }, 600)
+    }, 500)
   }
 
   build() {
     Column() {
-
-      // ===== 返回按钮（极简，浮在顶部）=====
-      Row() {
-        Button({ type: ButtonType.Normal }) {
-          Row({ space: 4 }) {
-            Text('‹').fontSize(22).fontColor('#FFFFFFCC').fontWeight(FontWeight.Bold)
-            Text('返回').fontSize(14).fontColor('#FFFFFFBB')
+      // 图2风格：顶部 blush/粉色 hero 区
+      Column() {
+        // 返回按钮
+        Row() {
+          Button({ type: ButtonType.Normal }) {
+            Text('‹ 返回').fontSize(15).fontColor('#5A4A4A')
           }
+          .height(36).backgroundColor(Color.Transparent)
+          .onClick(() => { try { router.back() } catch (e) {} })
+          Blank()
         }
-        .backgroundColor(Color.Transparent)
-        .height(40)
-        .padding({ left: 6, right: 14 })
-        .onClick(() => {
-          try { router.back() } catch (e) {}
-        })
-        Blank()
+        .width('100%')
+        .padding({ left: 16, top: 12 })
+
+        Blank().height(8)
+
+        // 大植物主图（模拟 img2 的大仙人掌）
+        Column() {
+          Text('🌵')
+            .fontSize(120)
+            .margin({ top: 20 })
+        }
+        .width('100%')
+        .height(200)
+        .justifyContent(FlexAlign.Center)
+
+        Blank().height(16)
+
+        // 三小缩略图（模拟 img2 底部三张）
+        Row({ space: 14 }) {
+          Column() {
+            Text('🌳').fontSize(36)
+          }
+          .width(88).height(88).borderRadius(20)
+          .backgroundColor('#FFFDF0')
+          .border({ width: 1, color: '#E8D8C8', style: BorderStyle.Solid })
+          .justifyContent(FlexAlign.Center)
+
+          Column() {
+            Text('🪴').fontSize(38)
+          }
+          .width(88).height(88).borderRadius(20)
+          .backgroundColor('#FFF8E6')
+          .border({ width: 1, color: '#E8D8C8', style: BorderStyle.Solid })
+          .justifyContent(FlexAlign.Center)
+
+          Column() {
+            Text('🌿').fontSize(34)
+          }
+          .width(88).height(88).borderRadius(20)
+          .backgroundColor('#EFF8EA')
+          .border({ width: 1, color: '#C8D8C0', style: BorderStyle.Solid })
+          .justifyContent(FlexAlign.Center)
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.Center)
+        .padding({ bottom: 28 })
       }
       .width('100%')
-      .padding({ top: 10, left: 4 })
+      .backgroundColor('#FDE8E4')
+      .opacity(this.heroOpacity)
+      .translate({ y: this.heroY })
 
-      // ===== 植物插画横幅（模拟植物插图感）=====
-      Column({ space: 6 }) {
-        Row() {
-          Text('🌵').fontSize(36).margin({ bottom: 0 })
-          Text('🌿').fontSize(52).margin({ top: 10 })
-          Text('🌸').fontSize(30).margin({ bottom: 4 })
-          Text('🪴').fontSize(48).margin({ top: 4 })
-          Text('🍃').fontSize(34).margin({ bottom: 6 })
-          Text('🌱').fontSize(40).margin({ top: 8 })
-        }
-        .width('90%')
-        .justifyContent(FlexAlign.SpaceEvenly)
-
-        Text('Monstera  ·  绿萝  ·  仙人掌  ·  多肉')
-          .fontSize(11)
-          .fontColor('#FFFFFF88')
+      // 图2风格：大字标 + SWIPE UP 感
+      Column({ space: 4 }) {
+        Text('PLANT')
+          .fontSize(36)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#8FB3C9')
+          .letterSpacing(8)
+        Text('CARE')
+          .fontSize(36)
+          .fontWeight(FontWeight.Bold)
+          .fontColor('#8FB3C9')
+          .letterSpacing(8)
+        Text('校园绿植养护助手')
+          .fontSize(13)
+          .fontColor('#4A7C2F')
+          .letterSpacing(2)
+          .margin({ top: 4 })
+        Text('记录植物成长 · 让养护变简单')
+          .fontSize(12)
+          .fontColor('#AAAAAA')
           .letterSpacing(0.5)
       }
-      .margin({ top: 4, bottom: 20 })
+      .padding({ top: 20, bottom: 18 })
+      .opacity(this.formOpacity)
+      .translate({ y: this.formY })
 
-      // ===== App Logo（缩小版）+ 名称 + Slogan =====
-      Column({ space: 8 }) {
-        Column() {
-          Image($r('app.media.startIcon'))
-            .width(46)
-            .height(46)
-            .borderRadius(13)
-            .objectFit(ImageFit.Contain)
-        }
-        .width(64)
-        .height(64)
-        .borderRadius(20)
-        .backgroundColor('#FFFFFF22')
-        .border({ width: 1.5, color: '#FFFFFF40', style: BorderStyle.Solid })
-        .justifyContent(FlexAlign.Center)
-        .shadow({ radius: 12, color: '#00000025', offsetY: 4 })
-
-        Text('校园绿植养护助手')
-          .fontSize(22)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#FFFFFF')
-
-        Text('记录植物成长，让养护变简单 🌿')
-          .fontSize(13)
-          .fontColor('#FFFFFFAA')
-          .letterSpacing(0.3)
-      }
-      .margin({ bottom: 28 })
-
-      // ===== 磨砂玻璃登录卡片 =====
+      // 登录表单区
       Scroll() {
-        Column({ space: 0 }) {
-          Column({ space: 22 }) {
-
-            // 卡片顶部标题
+        Column({ space: 16 }) {
+          // 表单卡片
+          Column({ space: 18 }) {
             Row() {
-              Column({ space: 3 }) {
-                Text('登录账号')
-                  .fontSize(20)
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor('#FFFFFF')
-                Text('欢迎回到你的绿植空间')
-                  .fontSize(12)
-                  .fontColor('#FFFFFF88')
-              }
-              .alignItems(HorizontalAlign.Start)
+              Text('LOGIN')
+                .fontSize(18)
+                .fontWeight(FontWeight.Bold)
+                .fontColor('#1A1A1A')
+                .letterSpacing(3)
               Blank()
-              Text('✦').fontSize(20).fontColor('#4ADE8088')
+              Text('🌿').fontSize(18)
             }
             .width('100%')
 
-            // ===== 用户名输入框（icon + 清除 + 焦点描边）=====
             Column({ space: 7 }) {
               Text('用户名 / 学号')
-                .fontSize(12)
-                .fontColor('#FFFFFFBB')
-                .fontWeight(FontWeight.Medium)
+                .fontSize(12).fontColor('#6D6A62')
                 .alignSelf(ItemAlign.Start)
-                .padding({ left: 2 })
-
               Row() {
-                Text('👤')
-                  .fontSize(17)
-                  .margin({ left: 14, right: 10 })
-                  .opacity(0.85)
-
+                Text('👤').fontSize(16).margin({ left: 14, right: 10 })
                 TextInput({ text: this.userName, placeholder: '请输入用户名或学号' })
-                  .layoutWeight(1)
-                  .height(50)
+                  .layoutWeight(1).height(48)
                   .backgroundColor(Color.Transparent)
-                  .fontSize(15)
-                  .fontColor('#FFFFFF')
-                  .caretColor('#4ADE80')
-                  .placeholderColor('#FFFFFF55')
-                  .onChange((val: string) => { this.userName = val })
-                  .onEditChange((isEditing: boolean) => {
-                    this.userNameFocused = isEditing
-                  })
-
+                  .fontSize(15).fontColor('#1A1A1A')
+                  .caretColor('#4A7C2F').placeholderColor('#BBBBBB')
+                  .onChange((v: string) => { this.userName = v })
+                  .onEditChange((b: boolean) => { this.userFocused = b })
                 if (this.userName.length > 0) {
-                  Column() {
-                    Text('✕')
-                      .fontSize(13)
-                      .fontColor('#FFFFFF77')
-                  }
-                  .width(38)
-                  .height(50)
-                  .justifyContent(FlexAlign.Center)
-                  .onClick(() => { this.userName = '' })
+                  Text('×').fontSize(18).fontColor('#BBBBBB')
+                    .padding({ right: 14 })
+                    .onClick(() => { this.userName = '' })
                 }
               }
-              .width('100%')
-              .height(52)
-              .borderRadius(14)
-              .backgroundColor(this.userNameFocused ? '#FFFFFF22' : '#FFFFFF12')
+              .height(52).width('100%').borderRadius(18)
+              .backgroundColor('#FAFAF8')
               .border({
-                width: this.userNameFocused ? 2 : 1,
-                color: this.userNameFocused ? '#4ADE80' : '#FFFFFF28',
+                width: this.userFocused ? 2 : 1,
+                color: this.userFocused ? '#4A7C2F' : '#E4DDD0',
                 style: BorderStyle.Solid
               })
             }
 
-            // ===== 密码输入框（icon + 清除 + 焦点描边）=====
             Column({ space: 7 }) {
               Text('密码')
-                .fontSize(12)
-                .fontColor('#FFFFFFBB')
-                .fontWeight(FontWeight.Medium)
+                .fontSize(12).fontColor('#6D6A62')
                 .alignSelf(ItemAlign.Start)
-                .padding({ left: 2 })
-
               Row() {
-                Text('🔒')
-                  .fontSize(17)
-                  .margin({ left: 14, right: 10 })
-                  .opacity(0.85)
-
+                Text('🔒').fontSize(16).margin({ left: 14, right: 10 })
                 TextInput({ text: this.password, placeholder: '请输入密码（至少3位）' })
-                  .layoutWeight(1)
-                  .height(50)
+                  .layoutWeight(1).height(48)
                   .backgroundColor(Color.Transparent)
-                  .fontSize(15)
-                  .fontColor('#FFFFFF')
-                  .caretColor('#4ADE80')
-                  .placeholderColor('#FFFFFF55')
+                  .fontSize(15).fontColor('#1A1A1A')
+                  .caretColor('#4A7C2F').placeholderColor('#BBBBBB')
                   .type(InputType.Password)
-                  .onChange((val: string) => { this.password = val })
-                  .onEditChange((isEditing: boolean) => {
-                    this.passwordFocused = isEditing
-                  })
-
+                  .onChange((v: string) => { this.password = v })
+                  .onEditChange((b: boolean) => { this.pwdFocused = b })
                 if (this.password.length > 0) {
-                  Column() {
-                    Text('✕')
-                      .fontSize(13)
-                      .fontColor('#FFFFFF77')
-                  }
-                  .width(38)
-                  .height(50)
-                  .justifyContent(FlexAlign.Center)
-                  .onClick(() => { this.password = '' })
+                  Text('×').fontSize(18).fontColor('#BBBBBB')
+                    .padding({ right: 14 })
+                    .onClick(() => { this.password = '' })
                 }
               }
-              .width('100%')
-              .height(52)
-              .borderRadius(14)
-              .backgroundColor(this.passwordFocused ? '#FFFFFF22' : '#FFFFFF12')
+              .height(52).width('100%').borderRadius(18)
+              .backgroundColor('#FAFAF8')
               .border({
-                width: this.passwordFocused ? 2 : 1,
-                color: this.passwordFocused ? '#4ADE80' : '#FFFFFF28',
+                width: this.pwdFocused ? 2 : 1,
+                color: this.pwdFocused ? '#4A7C2F' : '#E4DDD0',
                 style: BorderStyle.Solid
               })
             }
 
-            // 记住密码 + 忘记密码
             Row() {
               Toggle({ type: ToggleType.Checkbox, isOn: this.rememberPwd })
-                .width(18)
-                .height(18)
-                .selectedColor('#4ADE80')
-                .onChange((isOn: boolean) => { this.rememberPwd = isOn })
-              Text('  记住密码')
-                .fontSize(13)
-                .fontColor('#FFFFFFCC')
+                .width(18).height(18).selectedColor('#4A7C2F')
+                .onChange((b: boolean) => { this.rememberPwd = b })
+              Text(' 记住密码').fontSize(13).fontColor('#6D6A62')
               Blank()
-              Text('忘记密码？')
-                .fontSize(13)
-                .fontColor('#86EFAC')
-                .fontWeight(FontWeight.Medium)
+              Text('忘记密码？').fontSize(13).fontColor('#4A7C2F')
                 .onClick(() => {
                   try { promptAction.showToast({ message: '请联系管理员重置密码', duration: 2000 }) } catch (e) {}
                 })
             }
             .width('100%')
 
-            // ===== 渐变登录按钮（浅绿→深绿 + 点击缩放动画）=====
+            // 图2 SWIPE UP 风格登录按钮
             Button({ type: ButtonType.Normal }) {
               if (this.isLogging) {
                 Row({ space: 8 }) {
@@ -296,80 +265,55 @@ struct LoginPage {
                   Text('登录中...').fontSize(16).fontColor('#FFFFFF')
                 }
               } else {
-                Row({ space: 8 }) {
-                  Text('🌿').fontSize(16)
-                  Text('立  即  登  录')
-                    .fontSize(16)
-                    .fontWeight(FontWeight.Bold)
-                    .fontColor('#FFFFFF')
-                    .letterSpacing(1)
-                }
+                Text('SWIPE UP  /  立即登录')
+                  .fontSize(14).fontWeight(FontWeight.Bold)
+                  .fontColor('#FFFFFF').letterSpacing(1.5)
               }
             }
-            .width('100%')
-            .height(54)
-            .borderRadius(27)
-            .linearGradient({
-              angle: 90,
-              colors: [['#86EFAC', 0.0], ['#22C55E', 0.45], ['#15803D', 1.0]]
-            })
-            .shadow({ radius: 18, color: '#22C55E66', offsetY: 7 })
+            .height(54).width('100%').borderRadius(30)
+            .backgroundColor('#4A7C2F')
+            .shadow({ radius: 18, color: '#2D5A1B30', offsetY: 8 })
             .scale({ x: this.btnScale, y: this.btnScale })
             .enabled(!this.isLogging)
-            .onTouch((event: TouchEvent) => {
-              if (event.type === TouchType.Down) {
-                animateTo({ duration: 120, curve: Curve.EaseOut }, () => {
-                  this.btnScale = 0.95
-                })
-              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-                animateTo({ duration: 250, curve: Curve.EaseOut }, () => {
-                  this.btnScale = 1.0
-                })
+            .onTouch((e: TouchEvent) => {
+              if (e.type === TouchType.Down) {
+                animateTo({ duration: 100, curve: Curve.EaseOut }, () => { this.btnScale = 0.96 })
+              } else if (e.type === TouchType.Up || e.type === TouchType.Cancel) {
+                animateTo({ duration: 180, curve: Curve.EaseOut }, () => { this.btnScale = 1.0 })
               }
             })
             .onClick(() => { this.submitLogin() })
 
-            // 体验提示
-            Row({ space: 5 }) {
-              Text('💡').fontSize(12)
-              Text('任意用户名 + 3位以上密码即可体验')
-                .fontSize(12)
-                .fontColor('#FFFFFF66')
-            }
-            .justifyContent(FlexAlign.Center)
-            .width('100%')
+            Text('任意用户名 + 3位以上密码即可体验')
+              .fontSize(11).fontColor('#CCCCCC')
           }
-          .width('100%')
-          .padding({ left: 24, right: 24, top: 26, bottom: 30 })
+          .width('90%')
+          .padding({ left: 22, right: 22, top: 22, bottom: 24 })
           .borderRadius(28)
-          .backgroundColor('#FFFFFF15')
-          .backgroundBlurStyle(BlurStyle.Thin)
-          .border({ width: 1.5, color: '#FFFFFF25', style: BorderStyle.Solid })
-          .shadow({ radius: 32, color: '#00000028', offsetY: 14 })
+          .backgroundColor('#FFFDF8')
+          .border({ width: 1, color: '#E8E0D4', style: BorderStyle.Solid })
+          .shadow({ radius: 18, color: '#00000014', offsetY: 8 })
 
-          Blank().height(48)
+          Blank().height(28)
         }
-        .width('92%')
+        .width('100%')
         .alignItems(HorizontalAlign.Center)
       }
       .layoutWeight(1)
       .width('100%')
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
+      .opacity(this.formOpacity)
+      .translate({ y: this.formY })
     }
     .width('100%')
     .height('100%')
-    .linearGradient({
-      angle: 168,
-      colors: [['#052E16', 0.0], ['#064E27', 0.25], ['#0F6B35', 0.55], ['#166534', 0.8], ['#15803D', 1.0]]
-    })
+    .backgroundColor('#F7F4EF')
   }
 }
 
 @Component
 @Preview
 struct LoginPreview {
-  build() {
-    LoginPage()
-  }
+  build() { LoginPage() }
 }

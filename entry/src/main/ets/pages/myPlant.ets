@@ -11,34 +11,21 @@ interface PlantItem {
   date: string
 }
 
-function getPlantIcon(plantType: string): string {
-  const iconMap: Record<string, string> = {
-    '多肉': '🪴',
-    '绿萝': '🌿',
-    '月季': '🌹',
-    '富贵竹': '🎋',
-    '仙人掌': '🌵',
-    '吊兰': '🌱',
-    '龟背竹': '🍃',
-    '文竹': '🎍',
-    '其他': '🌻'
+function getPlantIcon(t: string): string {
+  const m: Record<string, string> = {
+    '多肉': '🪴', '绿萝': '🌿', '月季': '🌹', '富贵竹': '🎋',
+    '仙人掌': '🌵', '吊兰': '🌱', '龟背竹': '🍃', '文竹': '🎍', '其他': '🌻'
   }
-  return iconMap[plantType] || '🪴'
+  return m[t] || '🪴'
 }
 
-function getPlantLightBg(plantType: string): string {
-  const colorMap: Record<string, string> = {
-    '多肉': '#FFF8E6',
-    '绿萝': '#E8F7EE',
-    '月季': '#FCE7F3',
-    '富贵竹': '#EFF8DC',
-    '仙人掌': '#E0F7F2',
-    '吊兰': '#E6F7FA',
-    '龟背竹': '#E8F7EE',
-    '文竹': '#F0F8E6',
-    '其他': '#F3F4F6'
+function getPlantBg(t: string): string {
+  const m: Record<string, string> = {
+    '多肉': '#FFF8E6', '绿萝': '#EEF6EA', '月季': '#FCE8F2',
+    '富贵竹': '#EFF8DC', '仙人掌': '#E6F4F0', '吊兰': '#E8F4F8',
+    '龟背竹': '#EEF6EA', '文竹': '#F2F8E8', '其他': '#F4F4F4'
   }
-  return colorMap[plantType] || '#F3F4F6'
+  return m[t] || '#F4F4F4'
 }
 
 @Entry
@@ -50,56 +37,47 @@ struct MyPlantPage {
   @State searchText: string = ''
   @State selectedType: string = '全部'
   @State todayChecked: boolean = false
-  @State cardScale: number = 1.0
+  @State contentOpacity: number = 0
+  @State pressedKey: string = ''
+  @State refreshAngle: number = 0
   prefDB: preferences.Preferences | null = null
 
   typeTabs: Array<string> = ['全部', '多肉', '绿萝', '月季', '仙人掌', '其他']
   weekDays: Array<string> = ['一', '二', '三', '四', '五', '六', '日']
 
-  aboutToAppear() {
-    this.loadPlantData()
-  }
+  aboutToAppear() { this.loadData() }
+  onPageShow() { this.loadData() }
 
-  onPageShow() {
-    this.loadPlantData()
-  }
-
-  loadPlantData() {
+  loadData() {
     this.isLoading = true
+    this.contentOpacity = 0
     try {
       preferences.getPreferences(getContext(this), 'plantDB')
         .then((pref: preferences.Preferences) => {
           this.prefDB = pref
           try {
-            const data = pref.getSync('plantList', '[]') as string
-            this.plantList = JSON.parse(data) as Array<PlantItem>
-            const checkedDate = pref.getSync('plantCheckIn', '') as string
+            this.plantList = JSON.parse(pref.getSync('plantList', '[]') as string) as Array<PlantItem>
             const now = new Date()
-            this.todayChecked = checkedDate === `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`
-          } catch (e) {
-            this.plantList = []
-          }
+            this.todayChecked = pref.getSync('plantCheckIn', '') as string ===
+              `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`
+          } catch (e) { this.plantList = [] }
           this.applyFilter()
           this.isLoading = false
-        })
-        .catch(() => { this.isLoading = false })
-    } catch (e) {
-      this.isLoading = false
-    }
+          animateTo({ duration: 280, curve: Curve.EaseOut }, () => { this.contentOpacity = 1 })
+        }).catch(() => { this.isLoading = false })
+    } catch (e) { this.isLoading = false }
   }
 
   applyFilter() {
-    const keyword = this.searchText.trim()
-    const result: Array<PlantItem> = []
+    const kw = this.searchText.trim()
+    const res: Array<PlantItem> = []
     for (let i = 0; i < this.plantList.length; i++) {
-      const item = this.plantList[i]
-      const matchType = this.selectedType === '全部' || item.type === this.selectedType
-      const matchText = keyword.length === 0 || item.name.indexOf(keyword) >= 0 || item.type.indexOf(keyword) >= 0 || item.notes.indexOf(keyword) >= 0
-      if (matchType && matchText) {
-        result.push(item)
-      }
+      const it = this.plantList[i]
+      const mt = this.selectedType === '全部' || it.type === this.selectedType
+      const mk = kw.length === 0 || it.name.indexOf(kw) >= 0 || it.type.indexOf(kw) >= 0 || it.notes.indexOf(kw) >= 0
+      if (mt && mk) res.push(it)
     }
-    this.displayList = result
+    this.displayList = res
   }
 
   doCheckIn() {
@@ -116,22 +94,27 @@ struct MyPlantPage {
     } catch (e) {}
   }
 
+  refreshNow() {
+    animateTo({ duration: 440, curve: Curve.EaseOut }, () => { this.refreshAngle += 360 })
+    this.loadData()
+  }
+
+  pressDown(k: string) { this.pressedKey = k }
+  pressUp() { this.pressedKey = '' }
+
   showDeleteConfirm(index: number) {
-    const plantName = this.displayList[index].name
+    const name = this.displayList[index].name
     AlertDialog.show({
       title: '确认删除',
-      message: `确定要删除「${plantName}」吗？\n删除后数据无法恢复。`,
+      message: `确定要删除「${name}」吗？\n删除后数据无法恢复。`,
       primaryButton: {
-        value: '删除',
-        fontColor: '#F04438',
+        value: '删除', fontColor: '#E03030',
         action: () => {
-          const newList: Array<PlantItem> = []
+          const nl: Array<PlantItem> = []
           for (let i = 0; i < this.plantList.length; i++) {
-            if (this.plantList[i].name !== plantName) {
-              newList.push(this.plantList[i])
-            }
+            if (this.plantList[i].name !== name) nl.push(this.plantList[i])
           }
-          this.plantList = newList
+          this.plantList = nl
           this.applyFilter()
           try {
             this.prefDB?.putSync('plantList', JSON.stringify(this.plantList))
@@ -140,142 +123,161 @@ struct MyPlantPage {
           } catch (e) {}
         }
       },
-      secondaryButton: {
-        value: '取消',
-        fontColor: '#2FBF71',
-        action: () => {}
-      }
+      secondaryButton: { value: '取消', fontColor: '#4A7C2F', action: () => {} }
     })
   }
 
   build() {
     Column() {
-      Row() {
-        Button({ type: ButtonType.Normal }) {
-          Text('‹ 返回')
-            .fontSize(15)
-            .fontColor('#2FBF71')
+      // 图1风格：深绿头部
+      Column() {
+        Row() {
+          Button({ type: ButtonType.Normal }) {
+            Text('‹ 返回').fontSize(15).fontColor('#A5C87A')
+          }
+          .height(36).backgroundColor(Color.Transparent)
+          .onClick(() => { try { router.back() } catch (e) {} })
+
+          Blank()
+
+          Column({ space: 1 }) {
+            Text('MY PLANTS')
+              .fontSize(10).fontColor('#A5C87A').letterSpacing(3)
+            Text('我的绿植')
+              .fontSize(18).fontWeight(FontWeight.Bold).fontColor('#FFFFFF')
+          }
+
+          Blank()
+
+          Button('+ 添加', { type: ButtonType.Normal })
+            .height(34).borderRadius(20).fontSize(12)
+            .fontColor('#2D5A1B').backgroundColor('#C8E8B8')
+            .padding({ left: 14, right: 14 })
+            .onClick(() => { try { router.pushUrl({ url: 'pages/addPlant' }) } catch (e) {} })
         }
-        .height(40)
-        .backgroundColor(Color.Transparent)
-        .onClick(() => { try { router.back() } catch (e) {} })
-        Blank()
-        Text('我的绿植')
-          .fontSize(20)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#222222')
-        Blank()
-        Button('+ 添加', { type: ButtonType.Normal })
-          .height(36)
-          .borderRadius(30)
-          .fontSize(13)
-          .fontColor('#FFFFFF')
-          .backgroundColor('#2FBF71')
-          .padding({ left: 14, right: 14 })
-          .onClick(() => { try { router.pushUrl({ url: 'pages/addPlant' }) } catch (e) {} })
+        .width('100%')
+        .padding({ left: 18, right: 18, top: 14, bottom: 18 })
       }
-      .width('100%')
-      .padding({ left: 18, right: 18, top: 12, bottom: 8 })
-      .backgroundColor('#F6FAF7')
+      .backgroundColor('#2D5A1B')
 
       Scroll() {
-        Column({ space: 18 }) {
+        Column({ space: 16 }) {
+
           // 成长打卡卡片
           Column({ space: 14 }) {
             Row() {
-              Column({ space: 4 }) {
+              Column({ space: 3 }) {
+                Text('GROWTH CHECK-IN')
+                  .fontSize(10).fontColor('#8A8A8A').letterSpacing(2)
                 Text('成长打卡日历')
-                  .fontSize(18)
-                  .fontWeight(FontWeight.Bold)
-                  .fontColor('#222222')
+                  .fontSize(16).fontWeight(FontWeight.Bold).fontColor('#1A1A1A')
                 Text(this.todayChecked ? '今日已完成，继续保持' : '今天还没有记录养护状态')
-                  .fontSize(12)
-                  .fontColor('#8A8A8A')
+                  .fontSize(12).fontColor(this.todayChecked ? '#4A7C2F' : '#C0832A')
               }
               .alignItems(HorizontalAlign.Start)
               Blank()
               Button(this.todayChecked ? '已打卡' : '打卡', { type: ButtonType.Normal })
-                .height(38)
-                .borderRadius(30)
-                .fontSize(13)
+                .height(36).borderRadius(20).fontSize(13)
                 .fontColor('#FFFFFF')
-                .linearGradient({ angle: 90, colors: [['#58D68D', 0.0], ['#18A558', 1.0]] })
-                .padding({ left: 18, right: 18 })
+                .backgroundColor(this.todayChecked ? '#8AB875' : '#4A7C2F')
+                .padding({ left: 16, right: 16 })
+                .scale({ x: this.pressedKey === 'ci' ? 0.93 : 1, y: this.pressedKey === 'ci' ? 0.93 : 1 })
                 .onClick(() => { this.doCheckIn() })
+                .onTouch((e: TouchEvent) => {
+                  if (e.type === TouchType.Down) this.pressDown('ci')
+                  else if (e.type === TouchType.Up || e.type === TouchType.Cancel) this.pressUp()
+                })
             }
             .width('100%')
 
-            Row({ space: 8 }) {
-              ForEach(this.weekDays, (day: string, index: number) => {
-                Column({ space: 6 }) {
-                  Text(day)
-                    .fontSize(11)
-                    .fontColor('#8A8A8A')
-                  Text(index === 3 && this.todayChecked ? '✓' : '•')
-                    .fontSize(index === 3 && this.todayChecked ? 18 : 16)
-                    .fontColor(index === 3 && this.todayChecked ? '#FFFFFF' : '#2FBF71')
+            Row({ space: 6 }) {
+              ForEach(this.weekDays, (day: string, idx: number) => {
+                Column({ space: 5 }) {
+                  Text(day).fontSize(10).fontColor('#8A8A8A')
+                  Text(idx === 3 && this.todayChecked ? '✓' : '·')
+                    .fontSize(idx === 3 && this.todayChecked ? 16 : 18)
+                    .fontColor(idx === 3 && this.todayChecked ? '#FFFFFF' : '#4A7C2F')
                 }
-                .layoutWeight(1)
-                .height(58)
-                .borderRadius(18)
-                .backgroundColor(index === 3 && this.todayChecked ? '#2FBF71' : '#E8F7EE')
+                .layoutWeight(1).height(54).borderRadius(16)
+                .backgroundColor(idx === 3 && this.todayChecked ? '#4A7C2F' : '#EEF6EA')
                 .justifyContent(FlexAlign.Center)
               })
             }
             .width('100%')
           }
           .width('100%')
-          .padding(20)
-          .borderRadius(24)
-          .backgroundColor('#FFFFFF')
-          .shadow({ radius: 20, color: '#00000014', offsetY: 8 })
+          .padding(18)
+          .borderRadius(28)
+          .backgroundColor('#FFFDF8')
+          .border({ width: 1, color: '#E4DDD0', style: BorderStyle.Solid })
+          .shadow({ radius: 14, color: '#00000010', offsetY: 5 })
+          .opacity(this.contentOpacity)
+
+          // 刷新行
+          Row() {
+            Column({ space: 2 }) {
+              Text('PLANT RECORDS')
+                .fontSize(10).fontColor('#8A8A8A').letterSpacing(2)
+              Text('植物记录')
+                .fontSize(16).fontWeight(FontWeight.Bold).fontColor('#1A1A1A')
+            }
+            .alignItems(HorizontalAlign.Start)
+            Blank()
+            Row({ space: 6 }) {
+              Text('↻')
+                .fontSize(16).fontColor('#4A7C2F')
+                .rotate({ angle: this.refreshAngle })
+              Text('刷新').fontSize(13).fontColor('#4A7C2F')
+            }
+            .padding({ left: 14, right: 14, top: 8, bottom: 8 })
+            .borderRadius(24).backgroundColor('#EEF6EA')
+            .scale({ x: this.pressedKey === 'rf' ? 0.93 : 1, y: this.pressedKey === 'rf' ? 0.93 : 1 })
+            .onClick(() => { this.refreshNow() })
+            .onTouch((e: TouchEvent) => {
+              if (e.type === TouchType.Down) this.pressDown('rf')
+              else if (e.type === TouchType.Up || e.type === TouchType.Cancel) this.pressUp()
+            })
+          }
+          .width('100%')
+          .opacity(this.contentOpacity)
 
           // 搜索框
           Row() {
-            Text('🔍')
-              .fontSize(16)
-              .margin({ left: 14, right: 8 })
+            Text('🔍').fontSize(15).margin({ left: 14, right: 8 })
             TextInput({ text: this.searchText, placeholder: '搜索植物名称、类型或备注' })
-              .layoutWeight(1)
-              .height(48)
+              .layoutWeight(1).height(46)
               .backgroundColor(Color.Transparent)
-              .fontSize(14)
-              .placeholderColor('#B8B8B8')
-              .onChange((value: string) => {
-                this.searchText = value
-                this.applyFilter()
-              })
+              .fontSize(14).placeholderColor('#C0C0C0')
+              .onChange((v: string) => { this.searchText = v; this.applyFilter() })
             if (this.searchText.length > 0) {
-              Text('×')
-                .fontSize(18)
-                .fontColor('#8A8A8A')
+              Text('×').fontSize(18).fontColor('#AAAAAA')
                 .padding({ right: 14 })
-                .onClick(() => {
-                  this.searchText = ''
-                  this.applyFilter()
-                })
+                .onClick(() => { this.searchText = ''; this.applyFilter() })
             }
           }
-          .width('100%')
-          .height(52)
-          .borderRadius(18)
-          .backgroundColor('#FFFFFF')
-          .shadow({ radius: 20, color: '#00000014', offsetY: 8 })
+          .width('100%').height(52).borderRadius(20)
+          .backgroundColor('#FFFDF8')
+          .border({ width: 1, color: '#E4DDD0', style: BorderStyle.Solid })
+          .shadow({ radius: 10, color: '#00000008', offsetY: 4 })
+          .opacity(this.contentOpacity)
 
           // 分类筛选
           Scroll() {
-            Row({ space: 10 }) {
-              ForEach(this.typeTabs, (typeName: string) => {
-                Text(typeName)
+            Row({ space: 8 }) {
+              ForEach(this.typeTabs, (t: string) => {
+                Text(t)
                   .fontSize(13)
-                  .fontColor(this.selectedType === typeName ? '#FFFFFF' : '#2FBF71')
-                  .fontWeight(this.selectedType === typeName ? FontWeight.Bold : FontWeight.Normal)
+                  .fontColor(this.selectedType === t ? '#FFFFFF' : '#4A7C2F')
+                  .fontWeight(this.selectedType === t ? FontWeight.Bold : FontWeight.Normal)
+                  .letterSpacing(0.5)
                   .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-                  .borderRadius(30)
-                  .backgroundColor(this.selectedType === typeName ? '#2FBF71' : '#E8F7EE')
-                  .onClick(() => {
-                    this.selectedType = typeName
-                    this.applyFilter()
+                  .borderRadius(24)
+                  .backgroundColor(this.selectedType === t ? '#4A7C2F' : '#EEF6EA')
+                  .scale({ x: this.pressedKey === `tab-${t}` ? 0.93 : 1, y: this.pressedKey === `tab-${t}` ? 0.93 : 1 })
+                  .onClick(() => { this.selectedType = t; this.applyFilter() })
+                  .onTouch((e: TouchEvent) => {
+                    if (e.type === TouchType.Down) this.pressDown(`tab-${t}`)
+                    else if (e.type === TouchType.Up || e.type === TouchType.Cancel) this.pressUp()
                   })
               })
             }
@@ -283,119 +285,116 @@ struct MyPlantPage {
           .width('100%')
           .scrollable(ScrollDirection.Horizontal)
           .scrollBar(BarState.Off)
+          .opacity(this.contentOpacity)
 
+          // 内容区
           if (this.isLoading) {
             Column({ space: 12 }) {
-              LoadingProgress()
-                .width(42)
-                .height(42)
-                .color('#2FBF71')
-              Text('正在加载绿植记录')
-                .fontSize(13)
-                .fontColor('#8A8A8A')
+              this.SkeletonCard()
+              this.SkeletonCard()
+              this.SkeletonCard()
             }
-            .width('100%')
-            .padding(40)
+            .width('100%').opacity(0.8)
           } else if (this.displayList.length === 0) {
             Column({ space: 12 }) {
-              Text('🪴')
-                .fontSize(72)
-                .opacity(0.7)
-              Text(this.plantList.length === 0 ? '还没有绿植记录' : '没有找到匹配的绿植')
-                .fontSize(18)
-                .fontWeight(FontWeight.Bold)
-                .fontColor('#222222')
+              Text('🪴').fontSize(68).opacity(0.5)
+              Text(this.plantList.length === 0 ? '还没有绿植记录' : '没有匹配的绿植')
+                .fontSize(17).fontWeight(FontWeight.Bold).fontColor('#1A1A1A')
               Text(this.plantList.length === 0 ? '添加第一盆植物，建立你的校园植物角。' : '换个关键词或分类试试。')
-                .fontSize(13)
-                .fontColor('#8A8A8A')
+                .fontSize(13).fontColor('#8A8A8A').textAlign(TextAlign.Center).lineHeight(20)
               Button('添加绿植', { type: ButtonType.Normal })
-                .height(50)
-                .borderRadius(30)
-                .fontSize(15)
-                .fontColor('#FFFFFF')
-                .linearGradient({ angle: 90, colors: [['#58D68D', 0.0], ['#18A558', 1.0]] })
-                .padding({ left: 28, right: 28 })
+                .height(48).borderRadius(28).fontSize(14).fontColor('#FFFFFF')
+                .backgroundColor('#4A7C2F').padding({ left: 28, right: 28 })
                 .onClick(() => { try { router.pushUrl({ url: 'pages/addPlant' }) } catch (e) {} })
             }
-            .width('100%')
-            .padding(30)
-            .borderRadius(24)
-            .backgroundColor('#FFFFFF')
-            .shadow({ radius: 20, color: '#00000014', offsetY: 8 })
+            .width('100%').padding(28).borderRadius(28)
+            .backgroundColor('#FFFDF8')
+            .border({ width: 1, color: '#E4DDD0', style: BorderStyle.Solid })
+            .shadow({ radius: 14, color: '#00000010', offsetY: 5 })
+            .opacity(this.contentOpacity)
           } else {
             ForEach(this.displayList, (item: PlantItem, index: number) => {
               Row({ space: 14 }) {
-                Column() {
-                  Text(getPlantIcon(item.type))
-                    .fontSize(34)
-                }
-                .width(66)
-                .height(66)
-                .borderRadius(24)
-                .backgroundColor(getPlantLightBg(item.type))
-                .justifyContent(FlexAlign.Center)
+                Column() { Text(getPlantIcon(item.type)).fontSize(32) }
+                  .width(64).height(64).borderRadius(22)
+                  .backgroundColor(getPlantBg(item.type))
+                  .justifyContent(FlexAlign.Center)
 
                 Column({ space: 6 }) {
                   Text(item.name)
-                    .fontSize(17)
-                    .fontWeight(FontWeight.Bold)
-                    .fontColor('#222222')
+                    .fontSize(16).fontWeight(FontWeight.Bold).fontColor('#1A1A1A')
                   Row({ space: 8 }) {
                     Text(item.type)
-                      .fontSize(11)
-                      .fontColor('#18A558')
+                      .fontSize(11).fontColor('#4A7C2F')
                       .padding({ left: 8, right: 8, top: 3, bottom: 3 })
-                      .backgroundColor('#E8F7EE')
-                      .borderRadius(14)
+                      .backgroundColor('#D8F0D0').borderRadius(12)
                     Text(`💧 ${item.waterDays}天/次`)
-                      .fontSize(11)
-                      .fontColor('#8A8A8A')
+                      .fontSize(11).fontColor('#8A8A8A')
                   }
                   Text(`${item.sunlight} · ${item.date}`)
-                    .fontSize(12)
-                    .fontColor('#8A8A8A')
-                    .maxLines(1)
+                    .fontSize(11).fontColor('#AAAAAA').maxLines(1)
+                  if (item.notes && item.notes.length > 0) {
+                    Text(item.notes)
+                      .fontSize(11).fontColor('#BBBBBB').maxLines(1)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  }
                 }
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
 
                 Text('删除')
-                  .fontSize(12)
-                  .fontColor('#F04438')
-                  .padding({ left: 10, right: 10, top: 7, bottom: 7 })
-                  .backgroundColor('#FFF1F0')
-                  .borderRadius(18)
+                  .fontSize(11).fontColor('#E03030')
+                  .padding({ left: 10, right: 10, top: 6, bottom: 6 })
+                  .backgroundColor('#FCEAEA').borderRadius(16)
+                  .scale({ x: this.pressedKey === `del-${index}` ? 0.88 : 1, y: this.pressedKey === `del-${index}` ? 0.88 : 1 })
                   .onClick(() => { this.showDeleteConfirm(index) })
+                  .onTouch((e: TouchEvent) => {
+                    if (e.type === TouchType.Down) this.pressDown(`del-${index}`)
+                    else if (e.type === TouchType.Up || e.type === TouchType.Cancel) this.pressUp()
+                  })
               }
-              .width('100%')
-              .padding(16)
-              .borderRadius(24)
-              .backgroundColor('#FFFFFF')
-              .shadow({ radius: 20, color: '#00000014', offsetY: 8 })
-              .scale({ x: this.cardScale, y: this.cardScale })
+              .width('100%').padding(16).borderRadius(24)
+              .backgroundColor('#FFFDF8')
+              .border({ width: 1, color: '#E8E0D4', style: BorderStyle.Solid })
+              .shadow({ radius: 12, color: '#00000010', offsetY: 4 })
+              .scale({ x: this.pressedKey === `pl-${index}` ? 0.97 : 1, y: this.pressedKey === `pl-${index}` ? 0.97 : 1 })
+              .opacity(this.pressedKey === `pl-${index}` ? 0.76 : this.contentOpacity)
+              .onTouch((e: TouchEvent) => {
+                if (e.type === TouchType.Down) this.pressDown(`pl-${index}`)
+                else if (e.type === TouchType.Up || e.type === TouchType.Cancel) this.pressUp()
+              })
             })
           }
 
           Blank().height(24)
         }
         .width('100%')
-        .padding({ left: 20, right: 20, top: 8 })
+        .padding({ left: 18, right: 18, top: 16 })
       }
-      .width('100%')
-      .layoutWeight(1)
-      .scrollBar(BarState.Off)
-      .edgeEffect(EdgeEffect.Spring)
+      .layoutWeight(1).width('100%')
+      .scrollBar(BarState.Off).edgeEffect(EdgeEffect.Spring)
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor('#F6FAF7')
+    .width('100%').height('100%').backgroundColor('#F7F4EF')
+  }
+
+  @Builder
+  SkeletonCard() {
+    Row({ space: 14 }) {
+      Column().width(64).height(64).borderRadius(22).backgroundColor('#EEF6EA')
+      Column({ space: 10 }) {
+        Row().width('68%').height(14).borderRadius(7).backgroundColor('#EEEBE4')
+        Row().width('50%').height(11).borderRadius(6).backgroundColor('#F3EFE8')
+        Row().width('80%').height(11).borderRadius(6).backgroundColor('#F3EFE8')
+      }
+      .layoutWeight(1).justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Start)
+    }
+    .width('100%').padding(16).borderRadius(24)
+    .backgroundColor('#FFFDF8').shadow({ radius: 12, color: '#00000008', offsetY: 4 })
   }
 }
 
 @Component
 @Preview
 struct MyPlantPreview {
-  build() {
-    MyPlantPage()
-  }
+  build() { MyPlantPage() }
 }
