@@ -16,6 +16,7 @@ struct LoginPage {
   @State heroY: number = -20
   @State formOpacity: number = 0
   @State formY: number = 20
+  @State currentUser: string = ''
   prefDB: preferences.Preferences | null = null
 
   aboutToAppear() {
@@ -32,6 +33,7 @@ struct LoginPage {
         .then((pref: preferences.Preferences) => {
           this.prefDB = pref
           try {
+            this.currentUser = pref.getSync('user', '') as string
             const r = pref.getSync('rememberPwd', false) as boolean
             this.rememberPwd = r
             if (r) {
@@ -41,6 +43,34 @@ struct LoginPage {
           } catch (e) {}
         }).catch(() => {})
     } catch (e) {}
+  }
+
+  doLogout() {
+    AlertDialog.show({
+      title: '退出登录',
+      message: `确定退出「${this.currentUser}」的账号吗？`,
+      primaryButton: {
+        value: '确认退出',
+        fontColor: '#E03030',
+        action: () => {
+          try {
+            this.prefDB?.putSync('user', '')
+            this.prefDB?.putSync('password', '')
+            this.prefDB?.putSync('rememberPwd', false)
+            this.prefDB?.flush().catch(() => {})
+          } catch (e) {}
+          this.currentUser = ''
+          this.userName = ''
+          this.password = ''
+          try { promptAction.showToast({ message: '已退出登录', duration: 2000 }) } catch (e) {}
+        }
+      },
+      secondaryButton: {
+        value: '取消',
+        fontColor: '#4A7C2F',
+        action: () => {}
+      }
+    })
   }
 
   submitLogin() {
@@ -82,115 +112,117 @@ struct LoginPage {
 
   build() {
     Column() {
-      // 图2风格：顶部 blush/粉色 hero 区
-      Column() {
-        // 返回按钮
-        Row() {
-          Button({ type: ButtonType.Normal }) {
-            Text('‹ 返回').fontSize(15).fontColor('#5A4A4A')
-          }
-          .height(36).backgroundColor(Color.Transparent)
-          .onClick(() => { try { router.back() } catch (e) {} })
-          Blank()
+      // ── 顶部返回按钮（固定，不跟着滚）──
+      Row() {
+        Button({ type: ButtonType.Normal }) {
+          Text('‹ 返回').fontSize(15).fontColor('#5A4A4A')
         }
-        .width('100%')
-        .padding({ left: 16, top: 12 })
-
-        Blank().height(8)
-
-        // 大植物主图（模拟 img2 的大仙人掌）
-        Column() {
-          Text('🌵')
-            .fontSize(120)
-            .margin({ top: 20 })
-        }
-        .width('100%')
-        .height(200)
-        .justifyContent(FlexAlign.Center)
-
-        Blank().height(16)
-
-        // 三小缩略图（模拟 img2 底部三张）
-        Row({ space: 14 }) {
-          Column() {
-            Text('🌳').fontSize(36)
-          }
-          .width(88).height(88).borderRadius(20)
-          .backgroundColor('#FFFDF0')
-          .border({ width: 1, color: '#E8D8C8', style: BorderStyle.Solid })
-          .justifyContent(FlexAlign.Center)
-
-          Column() {
-            Text('🪴').fontSize(38)
-          }
-          .width(88).height(88).borderRadius(20)
-          .backgroundColor('#FFF8E6')
-          .border({ width: 1, color: '#E8D8C8', style: BorderStyle.Solid })
-          .justifyContent(FlexAlign.Center)
-
-          Column() {
-            Text('🌿').fontSize(34)
-          }
-          .width(88).height(88).borderRadius(20)
-          .backgroundColor('#EFF8EA')
-          .border({ width: 1, color: '#C8D8C0', style: BorderStyle.Solid })
-          .justifyContent(FlexAlign.Center)
-        }
-        .width('100%')
-        .justifyContent(FlexAlign.Center)
-        .padding({ bottom: 28 })
+        .height(36).backgroundColor(Color.Transparent)
+        .onClick(() => { try { router.back() } catch (e) {} })
+        Blank()
       }
       .width('100%')
+      .padding({ left: 16, top: 12, bottom: 4 })
       .backgroundColor('#FDE8E4')
       .opacity(this.heroOpacity)
-      .translate({ y: this.heroY })
 
-      // 图2风格：大字标 + SWIPE UP 感
-      Column({ space: 4 }) {
-        Text('PLANT')
-          .fontSize(36)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#8FB3C9')
-          .letterSpacing(8)
-        Text('CARE')
-          .fontSize(36)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#8FB3C9')
-          .letterSpacing(8)
-        Text('校园绿植养护助手')
-          .fontSize(13)
-          .fontColor('#4A7C2F')
-          .letterSpacing(2)
-          .margin({ top: 4 })
-        Text('记录植物成长 · 让养护变简单')
-          .fontSize(12)
-          .fontColor('#AAAAAA')
-          .letterSpacing(0.5)
-      }
-      .padding({ top: 20, bottom: 18 })
-      .opacity(this.formOpacity)
-      .translate({ y: this.formY })
-
-      // 登录表单区
+      // ── 整页内容全部在同一个 Scroll 里 ──
+      // hero 区紧凑化 + PLANT CARE 缩小 + 表单紧跟，首屏可见
       Scroll() {
-        Column({ space: 16 }) {
-          // 表单卡片
+        Column({ space: 0 }) {
+
+          // Hero 区：压缩高度，仙人掌缩小，三卡缩小
+          Column() {
+            Column() {
+              Text('🌵').fontSize(88)
+            }
+            .width('100%')
+            .height(138)
+            .justifyContent(FlexAlign.Center)
+
+            Row({ space: 10 }) {
+              Column() { Text('🌳').fontSize(28) }
+                .width(66).height(66).borderRadius(16)
+                .backgroundColor('#FFFDF0')
+                .border({ width: 1, color: '#E8D8C8', style: BorderStyle.Solid })
+                .justifyContent(FlexAlign.Center)
+
+              Column() { Text('🪴').fontSize(30) }
+                .width(66).height(66).borderRadius(16)
+                .backgroundColor('#FFF8E6')
+                .border({ width: 1, color: '#E8D8C8', style: BorderStyle.Solid })
+                .justifyContent(FlexAlign.Center)
+
+              Column() { Text('🌿').fontSize(26) }
+                .width(66).height(66).borderRadius(16)
+                .backgroundColor('#EFF8EA')
+                .border({ width: 1, color: '#C8D8C0', style: BorderStyle.Solid })
+                .justifyContent(FlexAlign.Center)
+            }
+            .width('100%')
+            .justifyContent(FlexAlign.Center)
+            .padding({ bottom: 16 })
+          }
+          .width('100%')
+          .backgroundColor('#FDE8E4')
+          .opacity(this.heroOpacity)
+          .translate({ y: this.heroY })
+
+          // PLANT CARE 标题：紧凑横排
+          Row({ space: 0 }) {
+            Column({ space: 2 }) {
+              Row({ space: 12 }) {
+                Text('PLANT').fontSize(26).fontWeight(FontWeight.Bold)
+                  .fontColor('#8FB3C9').letterSpacing(5)
+                Text('CARE').fontSize(26).fontWeight(FontWeight.Bold)
+                  .fontColor('#8FB3C9').letterSpacing(5)
+              }
+              Text('校园绿植养护助手 · 记录植物成长，让养护变简单')
+                .fontSize(11).fontColor('#AAAAAA').letterSpacing(0.4)
+            }
+            .alignItems(HorizontalAlign.Center)
+            .width('100%')
+          }
+          .width('100%')
+          .padding({ top: 14, bottom: 14 })
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor('#F7F4EF')
+          .opacity(this.formOpacity)
+          .translate({ y: this.formY })
+
+          // ── 登录表单卡片 ──
           Column({ space: 18 }) {
             Row() {
               Text('LOGIN')
-                .fontSize(18)
-                .fontWeight(FontWeight.Bold)
-                .fontColor('#1A1A1A')
-                .letterSpacing(3)
+                .fontSize(18).fontWeight(FontWeight.Bold)
+                .fontColor('#1A1A1A').letterSpacing(3)
               Blank()
               Text('🌿').fontSize(18)
             }
             .width('100%')
 
+            // 已登录状态提示
+            if (this.currentUser && this.currentUser.length > 0) {
+              Row() {
+                Text('✅').fontSize(14)
+                Text(` 当前账号：${this.currentUser}`)
+                  .fontSize(13).fontColor('#4A7C2F').fontWeight(FontWeight.Medium)
+                Blank()
+                Text('退出登录')
+                  .fontSize(12).fontColor('#E03030')
+                  .padding({ left: 10, right: 10, top: 5, bottom: 5 })
+                  .backgroundColor('#FCEAEA').borderRadius(14)
+                  .onClick(() => { this.doLogout() })
+              }
+              .width('100%')
+              .padding({ left: 2, right: 2, top: 6, bottom: 6 })
+              .borderRadius(12).backgroundColor('#F0FBF0')
+              .border({ width: 1, color: '#C8E8B8', style: BorderStyle.Solid })
+            }
+
             Column({ space: 7 }) {
               Text('用户名 / 学号')
-                .fontSize(12).fontColor('#6D6A62')
-                .alignSelf(ItemAlign.Start)
+                .fontSize(12).fontColor('#6D6A62').alignSelf(ItemAlign.Start)
               Row() {
                 Text('👤').fontSize(16).margin({ left: 14, right: 10 })
                 TextInput({ text: this.userName, placeholder: '请输入用户名或学号' })
@@ -217,8 +249,7 @@ struct LoginPage {
 
             Column({ space: 7 }) {
               Text('密码')
-                .fontSize(12).fontColor('#6D6A62')
-                .alignSelf(ItemAlign.Start)
+                .fontSize(12).fontColor('#6D6A62').alignSelf(ItemAlign.Start)
               Row() {
                 Text('🔒').fontSize(16).margin({ left: 14, right: 10 })
                 TextInput({ text: this.password, placeholder: '请输入密码（至少3位）' })
@@ -257,7 +288,6 @@ struct LoginPage {
             }
             .width('100%')
 
-            // 图2 SWIPE UP 风格登录按钮
             Button({ type: ButtonType.Normal }) {
               if (this.isLogging) {
                 Row({ space: 8 }) {
@@ -265,9 +295,9 @@ struct LoginPage {
                   Text('登录中...').fontSize(16).fontColor('#FFFFFF')
                 }
               } else {
-                Text('SWIPE UP  /  立即登录')
-                  .fontSize(14).fontWeight(FontWeight.Bold)
-                  .fontColor('#FFFFFF').letterSpacing(1.5)
+                Text('立 即 登 录')
+                  .fontSize(15).fontWeight(FontWeight.Bold)
+                  .fontColor('#FFFFFF').letterSpacing(2)
               }
             }
             .height(54).width('100%').borderRadius(30)
@@ -287,14 +317,17 @@ struct LoginPage {
             Text('任意用户名 + 3位以上密码即可体验')
               .fontSize(11).fontColor('#CCCCCC')
           }
-          .width('90%')
+          .width('92%')
           .padding({ left: 22, right: 22, top: 22, bottom: 24 })
           .borderRadius(28)
           .backgroundColor('#FFFDF8')
           .border({ width: 1, color: '#E8E0D4', style: BorderStyle.Solid })
           .shadow({ radius: 18, color: '#00000014', offsetY: 8 })
+          .margin({ top: 0 })
+          .opacity(this.formOpacity)
+          .translate({ y: this.formY })
 
-          Blank().height(28)
+          Blank().height(36)
         }
         .width('100%')
         .alignItems(HorizontalAlign.Center)
@@ -303,8 +336,6 @@ struct LoginPage {
       .width('100%')
       .scrollBar(BarState.Off)
       .edgeEffect(EdgeEffect.Spring)
-      .opacity(this.formOpacity)
-      .translate({ y: this.formY })
     }
     .width('100%')
     .height('100%')

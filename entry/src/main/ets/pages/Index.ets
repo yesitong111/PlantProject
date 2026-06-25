@@ -1,4 +1,5 @@
 import router from '@ohos.router'
+import preferences from '@ohos.data.preferences'
 
 @Entry
 @Component
@@ -28,11 +29,33 @@ struct SplashPage {
       })
       if (tick >= 7) {
         clearInterval(timer)
+        // 加载完成后判断登录状态，决定跳转目标
         setTimeout(() => {
-          try { router.replaceUrl({ url: 'pages/home' }) } catch (e) {}
+          this.navigateByLoginState()
         }, 280)
       }
     }, 560)
+  }
+
+  navigateByLoginState() {
+    try {
+      preferences.getPreferences(getContext(this), 'userData')
+        .then((pref: preferences.Preferences) => {
+          let savedUser = ''
+          try {
+            savedUser = pref.getSync('user', '') as string
+          } catch (e) {}
+          // 有保存的用户名 → 直接进首页；否则 → 登录页
+          const target = (savedUser && savedUser.length > 0) ? 'pages/home' : 'pages/login'
+          try { router.replaceUrl({ url: target }) } catch (e) {}
+        })
+        .catch(() => {
+          // 读取失败也去登录页，保证功能正常
+          try { router.replaceUrl({ url: 'pages/login' }) } catch (e) {}
+        })
+    } catch (e) {
+      try { router.replaceUrl({ url: 'pages/login' }) } catch (err) {}
+    }
   }
 
   build() {

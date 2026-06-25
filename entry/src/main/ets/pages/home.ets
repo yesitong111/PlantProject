@@ -135,6 +135,38 @@ struct HomePage {
   pressDown(k: string) { this.pressedKey = k }
   pressUp() { this.pressedKey = '' }
 
+  onAvatarTap() {
+    if (this.userName && this.userName.length > 0) {
+      // 已登录：提供注销选项
+      AlertDialog.show({
+        title: `Hi, ${this.userName}`,
+        message: '确定要退出登录吗？退出后需要重新登录。',
+        primaryButton: {
+          value: '退出登录',
+          fontColor: '#E03030',
+          action: () => {
+            try {
+              this.prefUser?.putSync('user', '')
+              this.prefUser?.putSync('password', '')
+              this.prefUser?.putSync('rememberPwd', false)
+              this.prefUser?.flush().catch(() => {})
+            } catch (e) {}
+            this.userName = ''
+            try { promptAction.showToast({ message: '已退出登录' }) } catch (e) {}
+          }
+        },
+        secondaryButton: {
+          value: '取消',
+          fontColor: '#4A7C2F',
+          action: () => {}
+        }
+      })
+    } else {
+      // 未登录：跳转登录页
+      this.go('pages/login')
+    }
+  }
+
   openPanel() {
     this.panelVisible = true
     animateTo({ duration: 300, curve: Curve.EaseOut }, () => {
@@ -202,8 +234,8 @@ struct HomePage {
               .backgroundColor('#FFFFFFCC')
               .justifyContent(FlexAlign.Center)
               .shadow({ radius: 10, color: '#00000030', offsetY: 4 })
-              .scale({ x: this.pressedKey === 'av' ? 0.9 : 1, y: this.pressedKey === 'av' ? 0.9 : 1 })
-              .onClick(() => { this.go('pages/login') })
+            .scale({ x: this.pressedKey === 'av' ? 0.9 : 1, y: this.pressedKey === 'av' ? 0.9 : 1 })
+            .onClick(() => { this.onAvatarTap() })
               .onTouch((e: TouchEvent) => {
                 if (e.type === TouchType.Down) this.pressDown('av')
                 else if (e.type === TouchType.Up || e.type === TouchType.Cancel) this.pressUp()
