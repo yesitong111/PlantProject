@@ -2,15 +2,19 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "module description"
+      "value": "校园绿植养护助手 - 帮助学生了解植物养护知识，管理个人绿植"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "description"
+      "value": "校园绿植养护助手"
     },
     {
       "name": "EntryAbility_label",
-      "value": "label"
+      "value": "绿植养护"
+    },
+    {
+      "name": "app_name",
+      "value": "校园绿植养护助手"
     }
   ]
 }
