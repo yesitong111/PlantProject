@@ -1,6 +1,8 @@
 import router from '@ohos.router'
 import preferences from '@ohos.data.preferences'
 import promptAction from '@ohos.promptAction'
+import { DataHelper } from '../common/DataHelper'
+import { getTodayKey } from '../common/PlantTypes'
 
 interface PlantItem {
   name: string
@@ -17,11 +19,6 @@ interface RecommendPlant {
   reason: string
   water: string
   light: string
-}
-
-function getTodayKey(): string {
-  const now = new Date()
-  return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`
 }
 
 @Entry
@@ -124,9 +121,11 @@ struct HomePage {
     }
     this.todayChecked = true
     this.checkInPulse = false
+    const key = getTodayKey()
     try {
-      this.prefPlant?.putSync('todayChecked', getTodayKey())
-      this.prefPlant?.flush().catch(() => {})
+      if (this.prefPlant) {
+        DataHelper.addCheckIn(this.prefPlant, key, '首页完成养护打卡')
+      }
       promptAction.showToast({ message: '今日打卡成功，植物很开心！' })
     } catch (e) {}
   }
@@ -137,32 +136,8 @@ struct HomePage {
 
   onAvatarTap() {
     if (this.userName && this.userName.length > 0) {
-      // 已登录：提供注销选项
-      AlertDialog.show({
-        title: `Hi, ${this.userName}`,
-        message: '确定要退出登录吗？退出后需要重新登录。',
-        primaryButton: {
-          value: '退出登录',
-          fontColor: '#E03030',
-          action: () => {
-            try {
-              this.prefUser?.putSync('user', '')
-              this.prefUser?.putSync('password', '')
-              this.prefUser?.putSync('rememberPwd', false)
-              this.prefUser?.flush().catch(() => {})
-            } catch (e) {}
-            this.userName = ''
-            try { promptAction.showToast({ message: '已退出登录' }) } catch (e) {}
-          }
-        },
-        secondaryButton: {
-          value: '取消',
-          fontColor: '#4A7C2F',
-          action: () => {}
-        }
-      })
+      this.go('pages/profile')
     } else {
-      // 未登录：跳转登录页
       this.go('pages/login')
     }
   }
@@ -298,6 +273,12 @@ struct HomePage {
             .backgroundBlurStyle(BlurStyle.Thin)
             .opacity(this.contentOpacity)
             .translate({ y: this.contentY })
+            .scale({ x: this.pressedKey === 'weather' ? 0.98 : 1, y: this.pressedKey === 'weather' ? 0.98 : 1 })
+            .onClick(() => { this.go('pages/weather') })
+            .onTouch((e: TouchEvent) => {
+              if (e.type === TouchType.Down) this.pressDown('weather')
+              else if (e.type === TouchType.Up || e.type === TouchType.Cancel) this.pressUp()
+            })
 
             // 大横幅：我的绿植
             Row({ space: 14 }) {
@@ -463,7 +444,7 @@ struct HomePage {
                 .justifyContent(FlexAlign.Center)
                 .scale({ x: this.pressedKey === 'rm' ? 0.93 : 1, y: this.pressedKey === 'rm' ? 0.93 : 1 })
                 .opacity(this.pressedKey === 'rm' ? 0.7 : 1)
-                .onClick(() => { this.openPanel() })
+                .onClick(() => { this.go('pages/reminder') })
                 .onTouch((e: TouchEvent) => {
                   if (e.type === TouchType.Down) this.pressDown('rm')
                   else if (e.type === TouchType.Up || e.type === TouchType.Cancel) this.pressUp()

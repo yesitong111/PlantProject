@@ -139,7 +139,8 @@ struct TipPage {
               .fontSize(18).fontWeight(FontWeight.Bold).fontColor('#FFFFFF')
           }
           Blank()
-          Row().width(60)
+          Text('⭐').fontSize(18)
+            .onClick(() => { try { router.pushUrl({ url: 'pages/favorite' }) } catch (e) {} })
         }
         .width('100%')
         .padding({ left: 18, right: 18, top: 14, bottom: 14 })

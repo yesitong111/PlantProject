@@ -1,6 +1,8 @@
 import router from '@ohos.router'
 import promptAction from '@ohos.promptAction'
 import preferences from '@ohos.data.preferences'
+import { DataHelper } from '../common/DataHelper'
+import { getTodayKey } from '../common/PlantTypes'
 
 interface PlantItem {
   name: string
@@ -57,9 +59,10 @@ struct MyPlantPage {
           this.prefDB = pref
           try {
             this.plantList = JSON.parse(pref.getSync('plantList', '[]') as string) as Array<PlantItem>
-            const now = new Date()
-            this.todayChecked = pref.getSync('plantCheckIn', '') as string ===
-              `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`
+            const key = getTodayKey()
+            const ck = pref.getSync('plantCheckIn', '') as string
+            const tc = pref.getSync('todayChecked', '') as string
+            this.todayChecked = ck === key || tc === key
           } catch (e) { this.plantList = [] }
           this.applyFilter()
           this.isLoading = false
@@ -85,11 +88,12 @@ struct MyPlantPage {
       try { promptAction.showToast({ message: '今天已经完成成长打卡啦' }) } catch (e) {}
       return
     }
-    const now = new Date()
+    const key = getTodayKey()
     this.todayChecked = true
     try {
-      this.prefDB?.putSync('plantCheckIn', `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`)
-      this.prefDB?.flush().catch(() => {})
+      if (this.prefDB) {
+        DataHelper.addCheckIn(this.prefDB, key, '我的绿植页完成成长打卡')
+      }
       promptAction.showToast({ message: '成长打卡成功！' })
     } catch (e) {}
   }
@@ -359,6 +363,11 @@ struct MyPlantPage {
               .shadow({ radius: 12, color: '#00000010', offsetY: 4 })
               .scale({ x: this.pressedKey === `pl-${index}` ? 0.97 : 1, y: this.pressedKey === `pl-${index}` ? 0.97 : 1 })
               .opacity(this.pressedKey === `pl-${index}` ? 0.76 : this.contentOpacity)
+              .onClick(() => {
+                try {
+                  router.pushUrl({ url: 'pages/plantDetail', params: { name: item.name } })
+                } catch (e) {}
+              })
               .onTouch((e: TouchEvent) => {
                 if (e.type === TouchType.Down) this.pressDown(`pl-${index}`)
                 else if (e.type === TouchType.Up || e.type === TouchType.Cancel) this.pressUp()

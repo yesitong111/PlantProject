@@ -1,10 +1,19 @@
 {
   "src": [
-    "pages/home",
     "pages/Index",
+    "pages/login",
+    "pages/register",
+    "pages/home",
+    "pages/profile",
     "pages/myPlant",
     "pages/addPlant",
+    "pages/editPlant",
+    "pages/plantDetail",
     "pages/tip",
-    "pages/login"
+    "pages/favorite",
+    "pages/reminder",
+    "pages/statistics",
+    "pages/weather",
+    "pages/about"
   ]
 }

@@ -1,6 +1,7 @@
 import router from '@ohos.router'
 import preferences from '@ohos.data.preferences'
 import promptAction from '@ohos.promptAction'
+import { DataHelper } from '../common/DataHelper'
 
 @Entry
 @Component
@@ -87,6 +88,19 @@ struct LoginPage {
       return
     }
     this.isLogging = true
+    const users = this.prefDB ? DataHelper.loadUsers(this.prefDB) : []
+    let matched = false
+    for (let i = 0; i < users.length; i++) {
+      if (users[i].user === this.userName.trim() && users[i].password === this.password) {
+        matched = true
+        break
+      }
+    }
+    if (users.length > 0 && !matched) {
+      this.isLogging = false
+      try { promptAction.showToast({ message: '用户名或密码错误', duration: 2000 }) } catch (e) {}
+      return
+    }
     try {
       this.prefDB?.putSync('user', this.userName.trim())
       if (this.rememberPwd) {
@@ -316,6 +330,12 @@ struct LoginPage {
 
             Text('任意用户名 + 3位以上密码即可体验')
               .fontSize(11).fontColor('#CCCCCC')
+
+            Row({ space: 4 }) {
+              Text('还没有账号？').fontSize(13).fontColor('#8A8A8A')
+              Text('立即注册').fontSize(13).fontColor('#4A7C2F').fontWeight(FontWeight.Bold)
+                .onClick(() => { try { router.pushUrl({ url: 'pages/register' }) } catch (e) {} })
+            }.justifyContent(FlexAlign.Center).width('100%').margin({ top: 4 })
           }
           .width('92%')
           .padding({ left: 22, right: 22, top: 22, bottom: 24 })
